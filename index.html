@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Analytics ML App</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .model-bar { max-width: 440px; margin: 0 auto 30px; background: white; padding: 18px 25px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .model-bar label { font-size: 15px; color: #2c3e50; }
+        .model-bar .hint { margin-top: 8px; font-size: 13px; color: #7f8c8d; min-height: 18px; }
+        .container { display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; }
+        .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 350px; }
+        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #34495e; font-weight: bold; font-size: 14px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background-color: #3498db; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .result { margin-top: 20px; padding: 15px; background-color: #e8f8f5; border-left: 5px solid #2ecc71; color: #27ae60; font-weight: bold; font-size: 18px; text-align: center; border-radius: 5px; display: none; }
+        .result small { display: block; margin-top: 6px; font-size: 12px; font-weight: normal; opacity: 0.8; }
+        .na-note { display: none; margin-top: 10px; padding: 10px; background: #fef9e7; border-left: 5px solid #f1c40f; color: #7d6608; font-size: 13px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>HR Analytics Dashboard</h1>
+        <p>Predict Employee Salary and Attrition Risk using Machine Learning</p>
+    </div>
+
+    <!-- Model selection menu -->
+    <div class="model-bar">
+        <label for="modelSelect">Select Model:</label>
+        <select id="modelSelect" onchange="onModelChange()">
+            <option value="linear">Linear / Logistic Regression (baseline)</option>
+            <option value="decision_tree">Decision Tree</option>
+            <option value="naive_bayes">Naive Bayes</option>
+            <option value="random_forest">Random Forest</option>
+            <option value="svm">Support Vector Machine (SVM)</option>
+        </select>
+        <div class="hint" id="modelHint"></div>
+    </div>
+
+    <div class="container">
+        <!-- Form 1: Salary Prediction (Regression) -->
+        <div class="card">
+            <h2>Predict Salary</h2>
+            <form id="regForm">
+                <div class="form-group">
+                    <label>Age:</label>
+                    <input type="number" id="age" value="35" required>
+                </div>
+                <div class="form-group">
+                    <label>Department:</label>
+                    <select id="department">
+                        <option value="Sales">Sales</option>
+                        <option value="Research & Development">Research & Development</option>
+                        <option value="Human Resources">Human Resources</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Job Level (1-5):</label>
+                    <input type="number" id="jobLevel" value="2" min="1" max="5" required>
+                </div>
+                <div class="form-group">
+                    <label>Total Working Years:</label>
+                    <input type="number" id="totalWorkingYears" value="10" required>
+                </div>
+                <div class="form-group">
+                    <label>OverTime:</label>
+                    <select id="overTime">
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+                <!-- Hidden fields to match backend requirement -->
+                <input type="hidden" id="dailyRate" value="800">
+                <input type="hidden" id="distanceFromHome" value="5">
+                <input type="hidden" id="education" value="3">
+                <input type="hidden" id="environmentSatisfaction" value="3">
+                <input type="hidden" id="jobSatisfaction" value="3">
+                <input type="hidden" id="monthlyRate" value="15000">
+                <input type="hidden" id="numCompaniesWorked" value="2">
+                <input type="hidden" id="stockOptionLevel" value="1">
+                <input type="hidden" id="trainingTimesLastYear" value="2">
+                <input type="hidden" id="workLifeBalance" value="3">
+                <input type="hidden" id="yearsAtCompany" value="5">
+
+                <button type="button" id="salaryBtn" onclick="predictSalary()">Predict Salary</button>
+            </form>
+            <div class="na-note" id="salaryNA">Naive Bayes is a classification-only algorithm, so it cannot predict salary (a continuous value). Choose another model for this card.</div>
+            <div class="result" id="salaryResult"></div>
+        </div>
+
+        <!-- Form 2: Attrition Prediction (Classification) -->
+        <div class="card">
+            <h2>Check Attrition Risk</h2>
+            <form id="clfForm">
+                <div class="form-group">
+                    <label>Age:</label>
+                    <input type="number" id="c_age" value="35" required>
+                </div>
+                <div class="form-group">
+                    <label>Department:</label>
+                    <select id="c_department">
+                        <option value="Sales">Sales</option>
+                        <option value="Research & Development">Research & Development</option>
+                        <option value="Human Resources">Human Resources</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Job Level (1-5):</label>
+                    <input type="number" id="c_jobLevel" value="2" min="1" max="5" required>
+                </div>
+                <div class="form-group">
+                    <label>Total Working Years:</label>
+                    <input type="number" id="c_totalWorkingYears" value="10" required>
+                </div>
+                <div class="form-group">
+                    <label>OverTime:</label>
+                    <select id="c_overTime">
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+                <!-- Hidden fields -->
+                <input type="hidden" id="c_dailyRate" value="800">
+                <input type="hidden" id="c_distanceFromHome" value="5">
+                <input type="hidden" id="c_education" value="3">
+                <input type="hidden" id="c_environmentSatisfaction" value="3">
+                <input type="hidden" id="c_jobSatisfaction" value="3">
+                <input type="hidden" id="c_monthlyRate" value="15000">
+                <input type="hidden" id="c_numCompaniesWorked" value="2">
+                <input type="hidden" id="c_stockOptionLevel" value="1">
+                <input type="hidden" id="c_trainingTimesLastYear" value="2">
+                <input type="hidden" id="c_workLifeBalance" value="3">
+                <input type="hidden" id="c_yearsAtCompany" value="5">
+
+                <button type="button" onclick="predictRisk()" style="background-color: #e67e22;">Check Risk</button>
+            </form>
+            <div class="result" id="riskResult" style="border-left-color: #e74c3c; background-color: #fdedec; color: #c0392b;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://127.0.0.1:8000';
+        let modelInfo = null;   // filled from /models (scores for the hint line)
+
+        function selectedModel() {
+            return document.getElementById('modelSelect').value;
+        }
+
+        // Called when the menu changes: update hint, toggle Naive Bayes limitation, clear old results
+        function onModelChange() {
+            const m = selectedModel();
+            const isNB = m === 'naive_bayes';
+            document.getElementById('salaryBtn').disabled = isNB;
+            document.getElementById('salaryNA').style.display = isNB ? 'block' : 'none';
+
+            document.getElementById('salaryResult').style.display = 'none';
+            document.getElementById('riskResult').style.display = 'none';
+
+            let hint = '';
+            if (modelInfo) {
+                const r = modelInfo.regression.find(x => x.key === m);
+                const c = modelInfo.classification.find(x => x.key === m);
+                const parts = [];
+                if (r && r.score != null) parts.push('Salary R²: ' + r.score.toFixed(2));
+                if (c && c.score != null) parts.push('Attrition accuracy: ' + (c.score * 100).toFixed(1) + '%');
+                hint = parts.join('  |  ');
+            }
+            document.getElementById('modelHint').innerText = hint;
+        }
+
+        // Load test scores from the API (menu still works if this fails)
+        async function loadModelInfo() {
+            try {
+                const res = await fetch(API + '/models');
+                modelInfo = await res.json();
+            } catch (e) { /* API not running yet, ignore */ }
+            onModelChange();
+        }
+
+        // Data prepare karne ka function
+        function getFormData(prefix = '') {
+            return {
+                age: parseInt(document.getElementById(prefix + 'age').value),
+                daily_rate: parseInt(document.getElementById(prefix + 'dailyRate').value),
+                department: document.getElementById(prefix + 'department').value,
+                distance_from_home: parseInt(document.getElementById(prefix + 'distanceFromHome').value),
+                education: parseInt(document.getElementById(prefix + 'education').value),
+                environment_satisfaction: parseInt(document.getElementById(prefix + 'environmentSatisfaction').value),
+                job_level: parseInt(document.getElementById(prefix + 'jobLevel').value),
+                job_satisfaction: parseInt(document.getElementById(prefix + 'jobSatisfaction').value),
+                monthly_rate: parseInt(document.getElementById(prefix + 'monthlyRate').value),
+                num_companies_worked: parseInt(document.getElementById(prefix + 'numCompaniesWorked').value),
+                over_time: document.getElementById(prefix + 'overTime').value,
+                stock_option_level: parseInt(document.getElementById(prefix + 'stockOptionLevel').value),
+                total_working_years: parseInt(document.getElementById(prefix + 'totalWorkingYears').value),
+                training_times_last_year: parseInt(document.getElementById(prefix + 'trainingTimesLastYear').value),
+                work_life_balance: parseInt(document.getElementById(prefix + 'workLifeBalance').value),
+                years_at_company: parseInt(document.getElementById(prefix + 'yearsAtCompany').value)
+            };
+        }
+
+        async function callApi(path, data) {
+            const response = await fetch(`${API}${path}?model=${encodeURIComponent(selectedModel())}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.detail || 'Request failed');
+            return result;
+        }
+
+        function showResult(div, html) {
+            div.style.display = 'block';
+            div.innerHTML = html;
+        }
+
+        // 1. Salary Predict Function
+        async function predictSalary() {
+            const div = document.getElementById('salaryResult');
+            try {
+                const result = await callApi('/predict/regression', getFormData(''));
+                showResult(div, `Predicted Monthly Income: $${result.predicted_monthly_income}<small>Model: ${result.model}</small>`);
+            } catch (err) {
+                showResult(div, 'Error: ' + err.message);
+            }
+        }
+
+        // 2. Risk Predict Function
+        async function predictRisk() {
+            const div = document.getElementById('riskResult');
+            try {
+                const result = await callApi('/predict/classification', getFormData('c_'));
+                showResult(div, `Attrition Risk: ${result.attrition_risk}<small>Model: ${result.model}</small>`);
+            } catch (err) {
+                showResult(div, 'Error: ' + err.message);
+            }
+        }
+
+        loadModelInfo();
+    </script>
+</body>
+</html>
